@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -8,6 +9,39 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final ApiService _apiService = ApiService();
+  bool _isLoading = false;
+
+  Future<void> _performLogin() async {
+    // Tidak perlu memvalidasi input, karena kita akan menggunakan kredensial default
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Panggil API login yang akan menggunakan kredensial default
+      await _apiService.login();
+
+      // Jika berhasil, navigasi ke main screen
+      // Cek 'mounted' untuk memastikan widget masih ada di tree
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/main');
+      }
+    } catch (e) {
+      // Tampilkan pesan error jika gagal
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login Failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             SizedBox(height: 60),
-            
+
             // Username field
             TextField(
               controller: _usernameController,
@@ -54,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             SizedBox(height: 16),
-            
+
             // Password field
             TextField(
               controller: _passwordController,
@@ -67,32 +101,32 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             SizedBox(height: 24),
-            
-            // Sign up button
+
+            // Tombol Sign In
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/main');
-                },
-                child: Text('Sign up'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _performLogin,
+                      child: Text('Sign In'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
             ),
             SizedBox(height: 16),
-            
-            // Register link
+
+            // Link ke Register
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('No have an account? '),
+                Text("Don't have an account? "),
                 GestureDetector(
                   onTap: () {
                     Navigator.pushNamed(context, '/register');

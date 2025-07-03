@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/article.dart';
+import '../providers/article_provider.dart';
 
 class MyArticlesScreen extends StatefulWidget {
   @override
@@ -7,28 +9,15 @@ class MyArticlesScreen extends StatefulWidget {
 }
 
 class _MyArticlesScreenState extends State<MyArticlesScreen> {
-  List<Article> articles = [
-    Article(
-      id: '1',
-      title: 'Hot News!!!',
-      thumbnail: '',
-      publishDate: '05 Juli 1999',
-      author: 'Test',
-      content: 'Jadi Begini Gaess!',
-      category: 'Teknologi',
-      source: 'Test',
-    ),
-    Article(
-      id: '2',
-      title: 'Hot News!',
-      thumbnail: '',
-      publishDate: '05 Juli 1998',
-      author: 'Admin',
-      content: 'Content here',
-      category: 'Teknologi',
-      source: 'Admin',
-    ),
-  ];
+  // Panggil fetchArticles saat widget pertama kali dibuat
+  @override
+  void initState() {
+    super.initState();
+    // Gunakan addPostFrameCallback untuk memastikan context sudah tersedia
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ArticleProvider>(context, listen: false).fetchArticles();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,22 +35,33 @@ class _MyArticlesScreenState extends State<MyArticlesScreen> {
         ),
         centerTitle: true,
       ),
-      body: articles.isEmpty
-          ? Center(
+      // Gunakan Consumer untuk mendengarkan perubahan dari ArticleProvider
+      body: Consumer<ArticleProvider>(
+        builder: (context, provider, child) {
+          if (provider.state == NotifierState.loading) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (provider.state == NotifierState.error) {
+            return Center(child: Text('Error: ${provider.errorMessage}'));
+          }
+          if (provider.articles.isEmpty) {
+            return Center(
               child: Text(
                 'Yuk Tambah Artikel :))',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
-            )
-          : ListView.builder(
-              itemCount: articles.length,
-              itemBuilder: (context, index) {
-                return _buildArticleItem(articles[index]);
-              },
-            ),
+            );
+          }
+          // Tampilkan daftar artikel jika data berhasil dimuat
+          return ListView.builder(
+            itemCount: provider.articles.length,
+            itemBuilder: (context, index) {
+              final article = provider.articles[index];
+              return _buildArticleItem(context, article);
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.pushNamed(context, '/add-article');
@@ -72,7 +72,8 @@ class _MyArticlesScreenState extends State<MyArticlesScreen> {
     );
   }
 
-  Widget _buildArticleItem(Article article) {
+  Widget _buildArticleItem(BuildContext context, Article article) {
+    final provider = Provider.of<ArticleProvider>(context, listen: false);
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: EdgeInsets.all(16),
@@ -109,8 +110,29 @@ class _MyArticlesScreenState extends State<MyArticlesScreen> {
                   ),
                   IconButton(
                     icon: Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      _deleteArticle(article.id);
+                    onPressed: () async {
+                      // Tampilkan dialog konfirmasi sebelum menghapus
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Hapus Artikel?'),
+                          content:
+                              Text('Apakah Anda yakin ingin menghapus artikel "${article.title}"?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text('Batal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text('Hapus'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await provider.deleteArticle(article.id);
+                      }
                     },
                   ),
                 ],
@@ -119,7 +141,7 @@ class _MyArticlesScreenState extends State<MyArticlesScreen> {
           ),
           SizedBox(height: 8),
           Text(
-            '${article.category} | ${article.publishDate} | ${article.author}',
+            '${article.category ?? "No Category"} | ${article.publishedAt?.toLocal().toString().substring(0, 10) ?? "No Date"}',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],
@@ -128,11 +150,5 @@ class _MyArticlesScreenState extends State<MyArticlesScreen> {
         ],
       ),
     );
-  }
-
-  void _deleteArticle(String id) {
-    setState(() {
-      articles.removeWhere((article) => article.id == id);
-    });
   }
 }

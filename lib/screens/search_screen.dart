@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/article.dart';
+import '../providers/article_provider.dart';
+import 'article_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -7,23 +11,37 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
-  bool _showResults = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Bersihkan hasil pencarian sebelumnya saat layar dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ArticleProvider>(context, listen: false).clearSearch();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
+        elevation: 1,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '9:41',
-          style: TextStyle(color: Colors.black, fontSize: 16),
+          'Cari Berita',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
       body: Column(
         children: [
@@ -32,8 +50,9 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
+              autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Search',
+                hintText: 'Ketik judul atau isi berita...',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -41,39 +60,51 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 filled: true,
                 fillColor: Colors.grey[100],
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    Provider.of<ArticleProvider>(context, listen: false).searchArticles('');
+                  },
+                ),
               ),
-              onSubmitted: (value) {
-                setState(() {
-                  _showResults = true;
-                });
+              onChanged: (value) {
+                // Panggil provider untuk melakukan pencarian setiap kali teks berubah
+                Provider.of<ArticleProvider>(context, listen: false).searchArticles(value);
               },
             ),
           ),
-          
-          // Results
-          if (_showResults) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Search result',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-          ],
-          
-          // Search results list
+
+          // Daftar hasil pencarian
           Expanded(
-            child: ListView.builder(
-              itemCount: _showResults ? 4 : 6,
-              itemBuilder: (context, index) {
-                return _buildSearchResultItem();
+            child: Consumer<ArticleProvider>(
+              builder: (context, provider, child) {
+                // Tampilkan pesan jika pencarian belum dimulai
+                if (!provider.isSearching) {
+                  return Center(
+                    child: Text(
+                      'Silakan mulai mencari berita.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  );
+                }
+                // Tampilkan pesan jika tidak ada hasil
+                if (provider.searchedArticles.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Tidak ada berita yang ditemukan.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  );
+                }
+                // Tampilkan hasil pencarian
+                return ListView.builder(
+                  itemCount: provider.searchedArticles.length,
+                  itemBuilder: (context, index) {
+                    final article = provider.searchedArticles[index];
+                    return _buildSearchResultItem(context, article);
+                  },
+                );
               },
             ),
           ),
@@ -82,44 +113,36 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildSearchResultItem() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
+  Widget _buildSearchResultItem(BuildContext context, Article article) {
+    return ListTile(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          article.featuredImageUrl ?? 'https://placehold.co/80x80/EEE/31343C?text=N/A',
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              width: 60,
+              height: 60,
               color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Judul Berita',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'CNN indonesia 30 menit yang lalu',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+              child: Icon(Icons.broken_image, color: Colors.grey, size: 24),
+            );
+          },
+        ),
       ),
+      title: Text(article.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+      subtitle: Text(article.summary ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(),
+            settings: RouteSettings(arguments: article),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/article.dart';
+import '../providers/article_provider.dart';
+import 'article_detail_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
   @override
@@ -6,120 +10,129 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  String _selectedCategory = 'Teknologi';
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    // Jika ada kategori, pilih yang pertama sebagai default
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<ArticleProvider>(context, listen: false);
+      if (provider.categories.isNotEmpty) {
+        setState(() {
+          _selectedCategory = provider.categories.first;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          '9:41',
-          style: TextStyle(color: Colors.black, fontSize: 16),
-        ),
-        centerTitle: false,
-      ),
-      body: Column(
-        children: [
-          // Category tabs
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                _buildCategoryTab('Terkini!!'),
-                SizedBox(width: 16),
-                _buildCategoryTab('Nasional'),
-                SizedBox(width: 16),
-                _buildCategoryTab('Teknologi'),
-              ],
-            ),
-          ),
-          
-          // News list
-          Expanded(
-            child: ListView.builder(
-              itemCount: 4,
-              itemBuilder: (context, index) {
-                return _buildNewsItem();
-              },
-            ),
-          ),
-        ],
+      body: Consumer<ArticleProvider>(
+        builder: (context, provider, child) {
+          if (provider.publicState == NotifierState.loading) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (provider.categories.isEmpty) {
+            return Center(child: Text('Tidak ada kategori ditemukan.'));
+          }
+
+          return Column(
+            children: [
+              // Daftar Chip Kategori
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: provider.categories.map((category) {
+                      return _buildCategoryChip(category);
+                    }).toList(),
+                  ),
+                ),
+              ),
+
+              // Daftar Artikel Berdasarkan Kategori yang Dipilih
+              Expanded(
+                child: _selectedCategory == null
+                    ? Center(child: Text('Pilih sebuah kategori.'))
+                    : ListView.builder(
+                        itemCount: provider.articlesByCategory[_selectedCategory]?.length ?? 0,
+                        itemBuilder: (context, index) {
+                          final article = provider.articlesByCategory[_selectedCategory]![index];
+                          return _buildNewsItem(context, article);
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCategoryTab(String category) {
+  Widget _buildCategoryChip(String category) {
     bool isSelected = category == _selectedCategory;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedCategory = category;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey,
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: ChoiceChip(
+        label: Text(category),
+        selected: isSelected,
+        onSelected: (selected) {
+          setState(() {
+            _selectedCategory = category;
+          });
+        },
+        selectedColor: Colors.blue,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.black,
         ),
-        child: Text(
-          category,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+        backgroundColor: Colors.grey[200],
+        shape: StadiumBorder(side: BorderSide(color: Colors.grey.shade300)),
       ),
     );
   }
 
-  Widget _buildNewsItem() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
+  Widget _buildNewsItem(BuildContext context, Article article) {
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          article.featuredImageUrl ?? 'https://placehold.co/80x80/EEE/31343C?text=N/A',
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              width: 80,
+              height: 80,
               color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Teknologi',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'CNN indonesia 30 menit yang lalu',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+              child: Icon(Icons.broken_image, color: Colors.grey, size: 30),
+            );
+          },
+        ),
       ),
+      title: Text(
+        article.title,
+        style: TextStyle(fontWeight: FontWeight.bold),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        'Oleh ${article.authorName ?? "Unknown"}',
+        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(),
+            settings: RouteSettings(arguments: article),
+          ),
+        );
+      },
     );
   }
 }

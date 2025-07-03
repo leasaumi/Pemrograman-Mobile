@@ -1,22 +1,6 @@
 import 'package:flutter/material.dart';
 
-class SplashScreen extends StatefulWidget {
-  @override
-  _SplashScreenState createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _navigateToLogin();
-  }
-
-  _navigateToLogin() async {
-    await Future.delayed(Duration(milliseconds: 3000), () {});
-    Navigator.pushReplacementNamed(context, '/login');
-  }
-
+class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,33 +33,13 @@ class _SplashScreenState extends State<SplashScreen> {
               ],
             ),
             SizedBox(height: 40),
+            CircularProgressIndicator(), // Menunjukkan proses loading
+            SizedBox(height: 20),
             Text(
-              'Berita Terupdate,',
+              'Loading...',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey[600],
-              ),
-            ),
-            Text(
-              'Setiap Saat',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: 60),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/login');
-              },
-              child: Text('Mulai'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
               ),
             ),
           ],
