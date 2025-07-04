@@ -4,6 +4,17 @@ import '../models/article.dart';
 class ArticleDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Ambil objek artikel dari argumen route
+    final Article? article = ModalRoute.of(context)?.settings.arguments as Article?;
+
+    // Tangani jika artikel tidak ditemukan
+    if (article == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Error")),
+        body: Center(child: Text("Article not found.")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -13,30 +24,48 @@ class ArticleDetailScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '9:41',
-          style: TextStyle(color: Colors.black, fontSize: 16),
+          'Detail Berita',
+          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category header
+            // Gambar Utama dari API
+            if (article.featuredImageUrl != null && article.featuredImageUrl!.isNotEmpty)
+              Image.network(
+                article.featuredImageUrl!,
+                width: double.infinity,
+                height: 250,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 250,
+                    color: Colors.grey[200],
+                    child:
+                        Center(child: Icon(Icons.broken_image, color: Colors.grey[600], size: 50)),
+                  );
+                },
+              ),
+
+            // Header Kategori (Gaya Lama, Data Dinamis)
             Container(
               width: double.infinity,
               padding: EdgeInsets.all(16),
               color: Colors.blue[50],
               child: Text(
-                'Teknologi',
+                article.category ?? 'Berita',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
                 ),
               ),
             ),
-            
-            // News banner
+
+            // Banner Statis (Gaya Lama)
             Container(
               margin: EdgeInsets.all(16),
               padding: EdgeInsets.all(16),
@@ -75,49 +104,41 @@ class ArticleDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
-            // Article content
+
+            // Konten Artikel (Gaya Lama, Data Dinamis)
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Judul Artikel',
+                    article.title,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'detik.com senin 24 desember 2025',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  Text(
-                    'penulis : Fatimah Azzahra,',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    'What is Lorem Ipsum?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   SizedBox(height: 12),
                   Text(
-                    'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
+                    'Penulis: ${article.authorName ?? "Unknown"}',
+                    style: TextStyle(
+                        fontSize: 14, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Diterbitkan: ${article.publishedAt?.toLocal().toString().substring(0, 16) ?? "N/A"}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  Divider(height: 32),
+                  Text(
+                    article.content ?? 'No content available for this article.',
                     style: TextStyle(
                       fontSize: 16,
-                      height: 1.5,
+                      height: 1.6,
+                      color: Colors.black87,
                     ),
                   ),
                 ],

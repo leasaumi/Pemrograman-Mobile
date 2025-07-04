@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/article_provider.dart';
 
 class AddArticleScreen extends StatefulWidget {
   @override
@@ -7,116 +9,56 @@ class AddArticleScreen extends StatefulWidget {
 
 class _AddArticleScreenState extends State<AddArticleScreen> {
   final _titleController = TextEditingController();
-  final _thumbnailController = TextEditingController();
-  final _publishDateController = TextEditingController();
-  final _authorController = TextEditingController();
+  final _summaryController = TextEditingController();
   final _contentController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Tambah Artikel',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
+        title: Text('Tambah Artikel'),
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTextField('Judul', _titleController),
-                    SizedBox(height: 16),
-                    _buildTextField('Thumbnail', _thumbnailController),
-                    SizedBox(height: 16),
-                    _buildTextField('Tanggal Terbit', _publishDateController),
-                    SizedBox(height: 16),
-                    _buildTextField('Penulis', _authorController),
-                    SizedBox(height: 16),
-                    _buildTextField('Isi Konten', _contentController, maxLines: 5),
-                  ],
-                ),
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(labelText: 'Judul'),
+                validator: (value) => value!.isEmpty ? 'Judul tidak boleh kosong' : null,
               ),
-            ),
-            
-            // Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Save article logic
-                      Navigator.pop(context);
-                    },
-                    child: Text('Simpan'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: Text('Batal'),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              TextFormField(
+                controller: _summaryController,
+                decoration: InputDecoration(labelText: 'Ringkasan'),
+                validator: (value) => value!.isEmpty ? 'Ringkasan tidak boleh kosong' : null,
+              ),
+              TextFormField(
+                controller: _contentController,
+                decoration: InputDecoration(labelText: 'Konten'),
+                maxLines: 5,
+                validator: (value) => value!.isEmpty ? 'Konten tidak boleh kosong' : null,
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    await Provider.of<ArticleProvider>(context, listen: false).addArticle(
+                      _titleController.text,
+                      _summaryController.text,
+                      _contentController.text,
+                    );
+                    Navigator.pop(context);
+                  }
+                },
+                child: Text('Simpan'),
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-        ),
-      ],
     );
   }
 }
